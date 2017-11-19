@@ -4,7 +4,7 @@ set -e
 usage () {
     echo "usage: git cleanup [-nh]" >&2
     echo >&2
-    echo "Deletes all branches that have already been merged into master, production, or canary." >&2
+    echo "Deletes all branches that have already been merged into master, develop or release." >&2
     echo "Removes those branches both locally and in the origin remote.  Will be " >&2
     echo "most conservative with deletions." >&2
     echo >&2
@@ -30,8 +30,8 @@ shift $(($OPTIND - 1))
 # merged into any of the known "trunks".  Trunks are any of:
 #
 #   - master (local) + origin/master
-#   - production (local) + origin/production
-#   - canary (local) + origin/canary
+#   - develop (local) + origin/develop
+#   - release (local) + origin/release
 #
 
 safegit () {
@@ -79,16 +79,16 @@ find_branch_base () {
 
 find_bases () {
     find_branch_base master
-    find_branch_base production
-    find_branch_base canary
+    find_branch_base develop
+    find_branch_base release
 }
 
 bases=$(find_bases)
 
 for branch in $(git local-branches          \
                 | grep -vxF 'master'        \
-                | grep -vxF 'production'    \
-                | grep -vxF 'canary'); do
+                | grep -vxF 'develop'       \
+                | grep -vxF 'release'); do
     for base in $bases; do
         if git contains "$base" "$branch"; then
             if ! git contains "$branch" "$base"; then
@@ -106,13 +106,13 @@ done
 # the remote anymore anyway.
 
 #XXX: FIXME: This gave trouble, as it tried to remove branches from Heroku remotes... :(
-#for remote in $(git remote); do
-for remote in origin; do
+for remote in $(git remote); do
+#for remote in origin; do
     safegit remote prune "$remote" >/dev/null 2>/dev/null
 
     if [ $remotes -eq 1 ]; then
         branches_to_remove=""
-        for branch in $(git remote-branches "$remote" | grep -vEe '/(master|production|canary)$'); do
+        for branch in $(git remote-branches "$remote" | grep -vEe '/(master|develop|release)$'); do
             for base in $bases; do
                 if git contains "$base" "$branch"; then
                     if ! git contains "$branch" "$base"; then
